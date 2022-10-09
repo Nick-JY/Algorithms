@@ -1,10 +1,12 @@
 ## 逆置链表：
 
-- 目前逆置链表类问题有两种类型：
+- 目前逆置链表类问题有三种类型：
   - 将链表进行整体逆置：
     - 逆置整个链表是基础问题，LeetCode上第206题。
   - 将链表进行局部逆置：
     - 局部逆置链表属于中等问题，有一定难度，但也需要掌握，LeetCode上第92题。
+  - 每K个节点一组对链表进行逆置：
+    - 该问题综合上面两类问题，难度较大，LeetCode上第25题，难度为Hard。
 - 无论是整体逆置链表还是局部逆置链表，基本思想都有两个：
   - 迭代：对于迭代算法来讲，时间复杂度是O(n)，空间复杂度是O(1)。
   - 递归：对于递归算法来讲，时间复杂度是O(n)，空间复杂度是O(n)。
@@ -110,7 +112,7 @@
       - 我们先来分析这段代码的base case：
 
         - 我们把第一个节点的索引设置成1，第二个设置成2......
-        - 鉴于逆置整个链表，我们是从最后一个开始，因此逆置前N个节点，我们应该从第n个节点开始，于是先将head更新n - 1次。我们使用base case直接返回第n个节点，并且把其后面的不需要逆置的节点取出来。
+        - 鉴于逆置整个链表，我们是从最后一个开始，因此逆置前N个节点，我们应该从第n个节点开始，于是先将head更新n - 1次。我 们使用base case直接返回第n个节点，并且把其后面的不需要逆置的节点取出来。
         - 接着就类似于逆置整个链表的过程，注意，当前级的head不再指向NULL，而是指向``nextNode``，并且``nextNode是固定值``。
 
   - 接下来我们分析区间转换：
@@ -179,3 +181,99 @@
 
     - 这代码和逆置整个链表如出一辙......
 
+### 3.每K个一组对链表进行逆置：
+
+- 相比于上面两个问题，该问题的``最优方法是递归``：
+  - 我们的目的是每K个元素翻转一次，并且对于后面不足K个元素的子链表，我们要保持不变。
+  - 对于第一个K，我们可以从前到后使用迭代进行逆置；对于第二个K，我们也可以使用迭代进行逆置。
+  - 但是问题的关键来了，如果使用迭代的话，最终要循环多少次呢？
+    - 我们可能会想着使用while循环，但是结束条件又是什么呢？因为最后要求不足K个元素的子链表保持不变，因此使用迭代并不好实现。
+- 每K个一组对链表进行逆置完全使用的是前面的算法：
+  - 我们可以使用**逆置前N个节点**的算法，每次更新head的值即可。
+    - 这里的每次指的是``将head更新K次``。
+- 思维分析图：
+  - 假设K = 2；
+  - 第一次递归，我们将前两个节点进行逆置。
+    - 这里注意将后面的节点进行承接(因此需要设置一个全局指针)。
+  - ![](https://nickaljy-pictures.oss-cn-hangzhou.aliyuncs.com/img/12749891223第一次递归.jpg)
+  - 第二次递归，我们将后面两个节点进行逆置。
+    - 这里要注意，进入到第二次递归的时候，节点3的前驱节点我们是找不到的，但是我们可以利用递归的返回特性进行连接。
+  - ![](https://nickaljy-pictures.oss-cn-hangzhou.aliyuncs.com/img/kjashjdkh920093第二次递归.jpg)
+  - 第三次递归，由于这条子链只有一个节点，因此我们不对其进行逆置，并且在这级递归中我们需要触发base case，返回前的最终结果如下：
+  - ![](https://nickaljy-pictures.oss-cn-hangzhou.aliyuncs.com/img/ansdjk8923490890最终结果.jpg)
+  - **重点事项**： 由于逆置操作是在递归之前完成的，因此该递归是一个``尾递归``。
+
+- 代码如下：
+
+  - ```cpp
+    ListNode* nextNode = nullptr;
+    ListNode* reverseKGroup(ListNode* head , int k)
+    {
+        ListNode* test = head;//我们创建一个检测指针，用来检测当前级别的递归符不符合逆置条件。
+        for (int i = 0 ; i < k ; i++)
+        {
+            if (test == nullptr)
+                return head;
+            test = test->next;
+        }
+        //我们需要仔细分析一下这个base case：
+        //假设链表：1 2 3 4 5，k = 2；
+        //我们要把if语句放在最前面，如果链表是空表，直接结束即可。
+        //第一次循环：test from 1 to 2;
+        //第二次循环：test from 2 to 3;test已经到达第二个节点了，第二次循环有什么意义呢？
+        //第二次循环中，会检测2号节点是否为nullptr，如果为nullptr，说明这级递归不满足逆置条件，因此这一次循环不可避免。
+        ListNode* newNode = reversePreN(head , k);//满足逆置条件，进行逆置操作。
+        head->next = reverseKGroup(head->next , k);//一定要注意，这个head->next表示的是下一层递归的起始节点。尾递归之后将链表逐层进行连接。
+        return newNode;
+    }
+    ListNode* reversePreN(ListNode* head , int n)
+    {
+        if (n == 1)
+        {
+            nextNode = head->next;
+            return head;
+        }
+        ListNode* last = reversePreN(head->next , n - 1);
+        head->next->next = head;
+        head->next = nextNode;
+        return last;
+    }//该函数一点变化都没有......
+    ```
+
+- 对上面的代码进行优化：
+
+  - 我们要清楚，k的值是能够为1的，当k = 1的时候，链表本质上没有发生任何变化，但是如果执行上面的操作的话，会递归n次(n是链表的节点数，这显然没有意义)。
+
+  - 于是我们在最开始增加一条判断语句(这条判断语句一定程度上也能帮base case的循环做一些事情)，另外，我们也把判断空表的任务写在最前面。
+
+  - 优化代码：
+
+    - ```cpp
+      ListNode* nextNode = nullptr;
+      		ListNode* reverseKGroup(ListNode* head , int k)
+      		{
+      			if (head == nullptr || k == 1)
+      				return head;//新增的优化选项。
+      			ListNode* test = head;
+      			for (int i = 0 ; i < k ; i++)
+      			{
+      				if (test == nullptr)
+      					return head;
+      				test = test->next;
+      			}
+      			ListNode* newNode = reversePreN(head , k);
+      			head->next = reverseKGroup(head->next , k);
+      			return newNode;
+      		}
+      		ListNode* reversePreN(ListNode* head , int n)
+      		{
+      			if (n == 1)
+      			{
+      				nextNode = head->next;
+      				return head;
+      			}
+      			ListNode* last = reversePreN(head->next , n - 1);
+      			head->next->next = head;
+      			head->next = nextNode;
+      			return last;
+      		}
